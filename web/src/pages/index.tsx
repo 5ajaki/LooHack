@@ -34,6 +34,45 @@ type GraphResponse = {
   }
 }
 
+// New component
+function EnsDataRow({
+  change,
+}: {
+  change: GraphResponse['data']['delegateChangeds'][number]
+}) {
+  const delegatorEns = useEnsName({
+    address: change.delegator as `0x${string}`,
+  })
+  const fromDelegateEns = useEnsName({
+    address: change.fromDelegate as `0x${string}`,
+  })
+  const toDelegateEns = useEnsName({
+    address: change.toDelegate as `0x${string}`,
+  })
+
+  return (
+    <tr>
+      <td>
+        {delegatorEns.isLoading
+          ? 'Loading...'
+          : delegatorEns.data || change.delegator}
+      </td>
+      <td>
+        {fromDelegateEns.isLoading
+          ? 'Loading...'
+          : fromDelegateEns.data || change.fromDelegate}
+      </td>
+      <td>
+        {toDelegateEns.isLoading
+          ? 'Loading...'
+          : toDelegateEns.data || change.toDelegate}
+      </td>
+      <td>{change.transactionHash}</td>
+      <td>{change.blockTimestamp}</td>
+    </tr>
+  )
+}
+
 export default function Home() {
   const { data, error } = useFetch<GraphResponse>(endpoint, {
     method: 'POST',
@@ -45,11 +84,6 @@ export default function Home() {
 
   const delegateChangeds = data?.data?.delegateChangeds
 
-  // create an array of addresses from delegateChangeds.delegator
-  const delegators = delegateChangeds?.map((change) => change.delegator)
-  const fromDelegates = delegateChangeds?.map((change) => change.fromDelegate)
-  const toDelegates = delegateChangeds?.map((change) => change.toDelegate)
-
   return (
     <>
       <Head>
@@ -60,11 +94,11 @@ export default function Home() {
         <meta property="og:description" content="" />
       </Head>
       <main>
-        <p>here is the ENS name for the first address: </p>
+        <p>Here are the ENS names for the addresses: </p>
 
         {delegateChangeds && (
           <>
-            <p>my data loaded yay!</p>
+            <p>My data loaded yay!</p>
             <table>
               <thead>
                 <tr>
@@ -77,16 +111,7 @@ export default function Home() {
               </thead>
               <tbody>
                 {delegateChangeds.slice(0, 5).map((change, index) => (
-                  <tr key={index}>
-                    <td>
-                      {/* useEnsName on this */}
-                      {change.delegator}
-                    </td>
-                    <td>{change.fromDelegate}</td>
-                    <td>{change.toDelegate}</td>
-                    <td>{change.transactionHash}</td>
-                    <td>{change.blockTimestamp}</td>
-                  </tr>
+                  <EnsDataRow key={index} change={change} />
                 ))}
               </tbody>
             </table>
