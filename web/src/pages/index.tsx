@@ -8,7 +8,7 @@ const endpoint =
 
 const query = `
   {
-    delegateChangeds {
+    delegateChangeds (orderBy: blockTimestamp, orderDirection: desc) {
       id
       delegator
       fromDelegate
