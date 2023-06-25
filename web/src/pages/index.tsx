@@ -50,7 +50,7 @@ type GraphResponse = {
   }
 }
 
-// New component
+// New component to build the table rows
 function EnsDataRow({
   change,
   votesChangeds,
@@ -58,36 +58,53 @@ function EnsDataRow({
   change: GraphResponse['data']['delegateChangeds'][number]
   votesChangeds: GraphResponse['data']['delegateVotesChangeds']
 }) {
-  let delegatorEns, fromDelegateEns, toDelegateEns
+  // Always call the hooks
+  const delegatorEns = useEnsName({
+    address: change.delegator as `0x${string}`,
+  })
 
-  if (change.delegator === '0x0000000000000000000000000000000000000000') {
-    delegatorEns = { isLoading: false, data: '0x0000' }
-  } else {
-    delegatorEns = useEnsName({
-      address: change.delegator as `0x${string}`,
-    })
-  }
+  const fromDelegateEns = useEnsName({
+    address: change.fromDelegate as `0x${string}`,
+  })
 
-  if (change.fromDelegate === '0x0000000000000000000000000000000000000000') {
-    fromDelegateEns = { isLoading: false, data: '0x0000' }
-  } else {
-    fromDelegateEns = useEnsName({
-      address: change.fromDelegate as `0x${string}`,
-    })
-  }
+  const toDelegateEns = useEnsName({
+    address: change.toDelegate as `0x${string}`,
+  })
 
-  if (change.toDelegate === '0x0000000000000000000000000000000000000000') {
-    toDelegateEns = { isLoading: false, data: '0x0000' }
-  } else {
-    toDelegateEns = useEnsName({
-      address: change.toDelegate as `0x${string}`,
-    })
-  }
+  // Decide later what to do with the results
+  const delegatorDisplay =
+    change.delegator === '0x0000000000000000000000000000000000000000'
+      ? '0x0000'
+      : delegatorEns.isLoading
+      ? 'Loading...'
+      : delegatorEns.data || change.delegator
+
+  const fromDelegateDisplay =
+    change.fromDelegate === '0x0000000000000000000000000000000000000000'
+      ? '0x0000'
+      : fromDelegateEns.isLoading
+      ? 'Loading...'
+      : fromDelegateEns.data || change.fromDelegate
+
+  const toDelegateDisplay =
+    change.toDelegate === '0x0000000000000000000000000000000000000000'
+      ? '0x0000'
+      : toDelegateEns.isLoading
+      ? 'Loading...'
+      : toDelegateEns.data || change.toDelegate
 
   // Find the corresponding votesChanged for the current delegateChanged
   const correspondingVotesChanged = votesChangeds.find(
     (vc) => vc.transactionHash === change.transactionHash
   )
+
+  const previousBalance = correspondingVotesChanged
+    ? correspondingVotesChanged.previousBalance
+    : 'N/A' // Default value in case there is no corresponding votesChanged
+
+  const newBalance = correspondingVotesChanged
+    ? correspondingVotesChanged.newBalance
+    : 'N/A' // Default value in case there is no corresponding votesChanged
 
   // Calculate the amount delegated
   const amountDelegated = correspondingVotesChanged
@@ -105,6 +122,8 @@ function EnsDataRow({
           ? 'Loading...'
           : delegatorEns.data || change.delegator}
       </td>
+      <td>{previousBalance}</td>
+      <td>{newBalance}</td>
       <td>{amountDelegated}</td>
       <td>
         {fromDelegateEns.isLoading
@@ -144,6 +163,12 @@ export default function Home() {
     setNumberOfRowsToShow(Number(inputValue))
   }
 
+  //Code for filtering by address
+  const [addressFilter, setAddressFilter] = useState('')
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddressFilter(e.target.value)
+  }
+
   return (
     <>
       <Head>
@@ -168,6 +193,17 @@ export default function Home() {
             Update
           </button>
         </div>
+        {/* Help me figure out why this comment is f'ing wierd */}
+        {/* This is the field to filter by address */}
+        <div style={{ marginBottom: '20px' }}>
+          <p style={{ marginBottom: '10px' }}>Filter by Address:</p>
+          <input
+            type="text"
+            value={addressFilter}
+            onChange={handleAddressChange}
+            style={{ marginRight: '10px', padding: '5px' }}
+          />
+        </div>
 
         {delegateChangeds && delegateVotesChangeds && (
           <>
@@ -176,7 +212,9 @@ export default function Home() {
                 <tr>
                   <th>Timestamp</th>
                   <th>Delegator</th>
-                  <th>Amount delegated</th>
+                  <th>Previous Balance</th>
+                  <th>New Balance</th>
+                  <th>Amount Delegated</th>
                   <th>From Delegate</th>
                   <th>To Delegate</th>
                   <th>Transaction Hash</th>
@@ -184,6 +222,17 @@ export default function Home() {
               </thead>
               <tbody>
                 {delegateChangeds
+                  .filter((change) => {
+                    return (
+                      addressFilter === '' || // if addressFilter is empty, keep all transactions
+                      change.delegator.toLowerCase() ===
+                        addressFilter.toLowerCase() ||
+                      change.fromDelegate.toLowerCase() ===
+                        addressFilter.toLowerCase() ||
+                      change.toDelegate.toLowerCase() ===
+                        addressFilter.toLowerCase()
+                    )
+                  })
                   .slice(0, numberOfRowsToShow)
                   .map((change, index) => (
                     <EnsDataRow
