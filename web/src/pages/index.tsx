@@ -20,6 +20,13 @@ const query = `
       blockTimestamp
       blockNumber
     }
+
+    delegateVotesChangeds(orderBy: blockTimestamp, orderDirection: desc) {
+      newBalance
+      previousBalance
+      transactionHash
+      delegate
+    }
   }
 `
 
@@ -34,14 +41,22 @@ type GraphResponse = {
       blockTimestamp: string
       blockNumber: string
     }[]
+    delegateVotesChangeds: {
+      newBalance: string
+      previousBalance: string
+      transactionHash: string
+      delegate: string
+    }[]
   }
 }
 
 // New component
 function EnsDataRow({
   change,
+  votesChangeds,
 }: {
   change: GraphResponse['data']['delegateChangeds'][number]
+  votesChangeds: GraphResponse['data']['delegateVotesChangeds']
 }) {
   let delegatorEns, fromDelegateEns, toDelegateEns
 
@@ -68,15 +83,29 @@ function EnsDataRow({
       address: change.toDelegate as `0x${string}`,
     })
   }
+
+  // Find the corresponding votesChanged for the current delegateChanged
+  const correspondingVotesChanged = votesChangeds.find(
+    (vc) => vc.transactionHash === change.transactionHash
+  )
+
+  // Calculate the amount delegated
+  const amountDelegated = correspondingVotesChanged
+    ? Number(correspondingVotesChanged.newBalance) -
+      Number(correspondingVotesChanged.previousBalance)
+    : 'N/A' // Default value in case there is no corresponding votesChanged
+
   const date = new Date(Number(change.blockTimestamp) * 1000)
 
   return (
     <tr>
+      <td>{date.toLocaleString()}</td>
       <td>
         {delegatorEns.isLoading
           ? 'Loading...'
           : delegatorEns.data || change.delegator}
       </td>
+      <td>{amountDelegated}</td>
       <td>
         {fromDelegateEns.isLoading
           ? 'Loading...'
@@ -88,7 +117,6 @@ function EnsDataRow({
           : toDelegateEns.data || change.toDelegate}
       </td>
       <td>{change.transactionHash}</td>
-      <td>{change.blockTimestamp}</td>
     </tr>
   )
 }
@@ -103,16 +131,13 @@ export default function Home() {
   })
 
   const delegateChangeds = data?.data?.delegateChangeds
+  const delegateVotesChangeds = data?.data?.delegateVotesChangeds
 
-  const [numberOfRowsToShow, setNumberOfRowsToShow] = useState(5)
-  const [inputValue, setInputValue] = useState('5') // start with default value
+  const [numberOfRowsToShow, setNumberOfRowsToShow] = useState(10)
+  const [inputValue, setInputValue] = useState('10') // start with default value
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value)
-  }
-
-  const handleSubmit = () => {
-    setNumberOfRowsToShow(Number(inputValue))
   }
 
   const handleButtonClick = () => {
@@ -144,23 +169,28 @@ export default function Home() {
           </button>
         </div>
 
-        {delegateChangeds && (
+        {delegateChangeds && delegateVotesChangeds && (
           <>
             <table>
               <thead>
                 <tr>
+                  <th>Timestamp</th>
                   <th>Delegator</th>
+                  <th>Amount delegated</th>
                   <th>From Delegate</th>
                   <th>To Delegate</th>
                   <th>Transaction Hash</th>
-                  <th>Block Timestamp</th>
                 </tr>
               </thead>
               <tbody>
                 {delegateChangeds
                   .slice(0, numberOfRowsToShow)
                   .map((change, index) => (
-                    <EnsDataRow key={index} change={change} />
+                    <EnsDataRow
+                      key={index}
+                      change={change}
+                      votesChangeds={delegateVotesChangeds}
+                    />
                   ))}
               </tbody>
             </table>
