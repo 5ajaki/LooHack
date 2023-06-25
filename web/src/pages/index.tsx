@@ -1,7 +1,10 @@
 import Head from 'next/head'
+import { useState } from 'react'
 import { useEnsName } from 'wagmi'
 
 import { useFetch } from '@/hooks/useFetch'
+
+const numberOfRowsToShow = 10
 
 const endpoint =
   'https://api.studio.thegraph.com/query/48901/loo-hack-fo-ens-token/v0.0.5'
@@ -40,15 +43,32 @@ function EnsDataRow({
 }: {
   change: GraphResponse['data']['delegateChangeds'][number]
 }) {
-  const delegatorEns = useEnsName({
-    address: change.delegator as `0x${string}`,
-  })
-  const fromDelegateEns = useEnsName({
-    address: change.fromDelegate as `0x${string}`,
-  })
-  const toDelegateEns = useEnsName({
-    address: change.toDelegate as `0x${string}`,
-  })
+  let delegatorEns, fromDelegateEns, toDelegateEns
+
+  if (change.delegator === '0x0000000000000000000000000000000000000000') {
+    delegatorEns = { isLoading: false, data: '0x0000' }
+  } else {
+    delegatorEns = useEnsName({
+      address: change.delegator as `0x${string}`,
+    })
+  }
+
+  if (change.fromDelegate === '0x0000000000000000000000000000000000000000') {
+    fromDelegateEns = { isLoading: false, data: '0x0000' }
+  } else {
+    fromDelegateEns = useEnsName({
+      address: change.fromDelegate as `0x${string}`,
+    })
+  }
+
+  if (change.toDelegate === '0x0000000000000000000000000000000000000000') {
+    toDelegateEns = { isLoading: false, data: '0x0000' }
+  } else {
+    toDelegateEns = useEnsName({
+      address: change.toDelegate as `0x${string}`,
+    })
+  }
+  const date = new Date(Number(change.blockTimestamp) * 1000)
 
   return (
     <tr>
@@ -84,6 +104,21 @@ export default function Home() {
 
   const delegateChangeds = data?.data?.delegateChangeds
 
+  const [numberOfRowsToShow, setNumberOfRowsToShow] = useState(5)
+  const [inputValue, setInputValue] = useState('5') // start with default value
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value)
+  }
+
+  const handleSubmit = () => {
+    setNumberOfRowsToShow(Number(inputValue))
+  }
+
+  const handleButtonClick = () => {
+    setNumberOfRowsToShow(Number(inputValue))
+  }
+
   return (
     <>
       <Head>
@@ -94,11 +129,23 @@ export default function Home() {
         <meta property="og:description" content="" />
       </Head>
       <main>
-        <p>Here are the ENS names for the addresses: </p>
+        <div style={{ marginBottom: '20px' }}>
+          <p style={{ marginBottom: '10px' }}>
+            Enter the number of Txs to display:
+          </p>
+          <input
+            type="number"
+            value={inputValue}
+            onChange={handleInputChange}
+            style={{ marginRight: '10px', padding: '5px' }}
+          />
+          <button onClick={handleButtonClick} style={{ padding: '5px' }}>
+            Update
+          </button>
+        </div>
 
         {delegateChangeds && (
           <>
-            <p>My data loaded yay!</p>
             <table>
               <thead>
                 <tr>
@@ -110,9 +157,11 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {delegateChangeds.slice(0, 5).map((change, index) => (
-                  <EnsDataRow key={index} change={change} />
-                ))}
+                {delegateChangeds
+                  .slice(0, numberOfRowsToShow)
+                  .map((change, index) => (
+                    <EnsDataRow key={index} change={change} />
+                  ))}
               </tbody>
             </table>
           </>
