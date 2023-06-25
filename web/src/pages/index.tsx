@@ -117,25 +117,21 @@ function EnsDataRow({
   return (
     <tr>
       <td>{date.toLocaleString()}</td>
-      <td>
-        {delegatorEns.isLoading
-          ? 'Loading...'
-          : delegatorEns.data || change.delegator}
-      </td>
+      <td>{delegatorDisplay}</td>
       <td>{previousBalance}</td>
       <td>{newBalance}</td>
       <td>{amountDelegated}</td>
+      <td>{fromDelegateDisplay}</td>
+      <td>{toDelegateDisplay}</td>
       <td>
-        {fromDelegateEns.isLoading
-          ? 'Loading...'
-          : fromDelegateEns.data || change.fromDelegate}
+        <a
+          href={`https://etherscan.io/tx/${change.transactionHash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {change.transactionHash.slice(0, 7)}
+        </a>
       </td>
-      <td>
-        {toDelegateEns.isLoading
-          ? 'Loading...'
-          : toDelegateEns.data || change.toDelegate}
-      </td>
-      <td>{change.transactionHash}</td>
     </tr>
   )
 }
